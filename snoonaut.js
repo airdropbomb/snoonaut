@@ -25,7 +25,7 @@ const logger = {
   banner: () => {
     console.log(`${colors.cyan}${colors.bold}`);
     console.log('-----------------------------------------------');
-    console.log('  Snoonaut Auto Bot - Airdrop Insiders  ');
+    console.log('  Snoonaut Auto Bot - ADB NODE  ');
     console.log('-----------------------------------------------');
     console.log(`${colors.reset}\n`);
   },
