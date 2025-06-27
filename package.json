@@ -1,15 +1,15 @@
 {
-  "name": "snoonaut auto bot",
+  "name": "snoonaut",
   "version": "1.0.0",
-  "description": "Daily Auto Bot",
-  "main": "index.js",
+  "description": "Snoonaut Auto Bot",
+  "main": "snoonaut.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node snoonaut.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
     "dotenv": "^16.4.5",
-    "https-proxy-agent": "^7.0.5"
+    "https-proxy-agent": "^7.0.5",
     "inquirer": "^9.2.12"
   }
 }
