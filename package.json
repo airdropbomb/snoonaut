@@ -10,5 +10,6 @@
     "axios": "^1.7.2",
     "dotenv": "^16.4.5",
     "https-proxy-agent": "^7.0.5"
+    "inquirer": "^9.2.12"
   }
 }
