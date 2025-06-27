@@ -1,1 +1,268 @@
-require%28%27dotenv%27%29.config%28%29%3B%0Aconst%20axios%20%3D%20require%28%27axios%27%29%3B%0Aconst%20%7B%20HttpsProxyAgent%20%7D%20%3D%20require%28%27https-proxy-agent%27%29%3B%0Aconst%20fs%20%3D%20require%28%27fs%27%29%3B%0Aconst%20inquirer%20%3D%20require%28%27inquirer%27%29%3B%0A%0A%2F%2F%20Colors%20and%20Logger%0Aconst%20colors%20%3D%20%7B%0A%20%20reset%3A%20%22%5Cx1b%5B0m%22%2C%0A%20%20cyan%3A%20%22%5Cx1b%5B36m%22%2C%0A%20%20green%3A%20%22%5Cx1b%5B32m%22%2C%0A%20%20yellow%3A%20%22%5Cx1b%5B33m%22%2C%0A%20%20red%3A%20%22%5Cx1b%5B31m%22%2C%0A%20%20white%3A%20%22%5Cx1b%5B37m%22%2C%0A%20%20bold%3A%20%22%5Cx1b%5B1m%22%2C%0A%20%20blue%3A%20%22%5Cx1b%5B34m%22%2C%0A%20%20magenta%3A%20%22%5Cx1b%5B35m%22%2C%0A%7D%3B%0A%0Aconst%20logger%20%3D%20%7B%0A%20%20info%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.green%7D%5B%E2%9C%93%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20warn%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.yellow%7D%5B%E2%9A%A0%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20error%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.red%7D%5B%E2%9C%97%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20success%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.green%7D%5B%E2%9C%85%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20loading%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.cyan%7D%5B%E2%9F%B3%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20step%3A%20%28msg%29%20%3D%3E%20console.log%28%60%24%7Bcolors.white%7D%5B%E2%9E%A4%5D%20%24%7Bmsg%7D%24%7Bcolors.reset%7D%60%29%2C%0A%20%20banner%3A%20%28%29%20%3D%3E%20%7B%0A%20%20%20%20console.log%28%60%24%7Bcolors.cyan%7D%24%7Bcolors.bold%7D%60%29%3B%0A%20%20%20%20console.log%28%27-----------------------------------------------%27%29%3B%0A%20%20%20%20console.log%28%27%20%20Snoonaut%20Auto%20Bot%20-%20ADB%20NODE%20%20%27%29%3B%0A%20%20%20%20console.log%28%27-----------------------------------------------%27%29%3B%0A%20%20%20%20console.log%28%60%24%7Bcolors.reset%7D%5Cn%60%29%3B%0A%20%20%7D%2C%0A%7D%3B%0A%0A%2F%2F%20Random%20User-Agent%0Aconst%20randomUA%20%3D%20%28%29%20%3D%3E%20%7B%0A%20%20const%20uas%20%3D%20%5B%0A%20%20%20%20%27Mozilla%2F5.0%20%28Windows%20NT%2010.0%3B%20Win64%3B%20x64%29%20AppleWebKit%2F537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome%2F91.0.4472.124%20Safari%2F537.36%27%2C%0A%20%20%20%20%27Mozilla%2F5.0%20%28Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7%29%20AppleWebKit%2F605.1.15%20%28KHTML%2C%20like%20Gecko%29%20Version%2F14.0.3%20Safari%2F605.1.15%27%2C%0A%20%20%20%20%27Mozilla%2F5.0%20%28X11%3B%20Ubuntu%3B%20Linux%20x86_64%3B%20rv%3A89.0%29%20Gecko%2F20100101%20Firefox%2F89.0%27%2C%0A%20%20%5D%3B%0A%20%20return%20uas%5BMath.floor%28Math.random%28%29%20%2A%20uas.length%29%5D%3B%0A%7D%3B%0A%0A%2F%2F%20Proxy%20Agent%0Aconst%20getProxyAgent%20%3D%20%28%29%20%3D%3E%20%7B%0A%20%20if%20%28fs.existsSync%28%27proxies.txt%27%29%29%20%7B%0A%20%20%20%20const%20proxies%20%3D%20fs.readFileSync%28%27proxies.txt%27%2C%20%27utf-8%27%29.split%28%27%5Cn%27%29.filter%28Boolean%29%3B%0A%20%20%20%20if%20%28proxies.length%20%3E%200%29%20%7B%0A%20%20%20%20%20%20const%20proxy%20%3D%20proxies%5BMath.floor%28Math.random%28%29%20%2A%20proxies.length%29%5D%3B%0A%20%20%20%20%20%20const%20proxyUrl%20%3D%20proxy.includes%28%27http%27%29%20%7C%7C%20proxy.includes%28%27socks%27%29%20%3F%20proxy%20%3A%20%60http%3A%2F%2F%24%7Bproxy%7D%60%3B%0A%20%20%20%20%20%20return%20new%20HttpsProxyAgent%28proxyUrl%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%0A%20%20return%20null%3B%0A%7D%3B%0A%0A%2F%2F%20Load%20Cookies%0Aconst%20loadCookies%20%3D%20%28%29%20%3D%3E%20%7B%0A%20%20const%20cookies%20%3D%20%5B%5D%3B%0A%20%20Object.keys%28process.env%29.forEach%28%28key%29%20%3D%3E%20%7B%0A%20%20%20%20if%20%28key.startsWith%28%27COOKIE_%27%29%29%20%7B%0A%20%20%20%20%20%20cookies.push%28process.env%5Bkey%5D%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%29%3B%0A%20%20return%20cookies%3B%0A%7D%3B%0A%0A%2F%2F%20Create%20Axios%20Instance%0Aconst%20createAxiosInstance%20%3D%20%28cookie%29%20%3D%3E%20axios.create%28%7B%0A%20%20baseURL%3A%20%27https%3A%2F%2Fearn.snoonaut.xyz%2Fapi%27%2C%0A%20%20headers%3A%20%7B%0A%20%20%20%20%27accept%27%3A%20%27%2A%2F%2A%27%2C%0A%20%20%20%20%27accept-language%27%3A%20%27en-US%2Cen%3Bq%3D0.8%27%2C%0A%20%20%20%20%27cache-control%27%3A%20%27max-age%3D120%27%2C%0A%20%20%20%20%27priority%27%3A%20%27u%3D1%2C%20i%27%2C%0A%20%20%20%20%27sec-ch-ua%27%3A%20%27%22Not%29A%3BBrand%22%3Bv%3D%228%22%2C%20%22Chromium%22%3Bv%3D%22138%22%2C%20%22Brave%22%3Bv%3D%22138%22%27%2C%0A%20%20%20%20%27sec-ch-ua-mobile%27%3A%20%27%3F0%27%2C%0A%20%20%20%20%27sec-ch-ua-platform%27%3A%20%27%22Windows%22%27%2C%0A%20%20%20%20%27sec-fetch-dest%27%3A%20%27empty%27%2C%0A%20%20%20%20%27sec-fetch-mode%27%3A%20%27cors%27%2C%0A%20%20%20%20%27sec-fetch-site%27%3A%20%27same-origin%27%2C%0A%20%20%20%20%27sec-gpc%27%3A%20%271%27%2C%0A%20%20%20%20%27cookie%27%3A%20cookie%2C%0A%20%20%20%20%27Referer%27%3A%20%27https%3A%2F%2Fearn.snoonaut.xyz%2Fhome%27%2C%0A%20%20%7D%2C%0A%7D%29%3B%0A%0A%2F%2F%20Daily%20Check-in%20Function%0Aconst%20performDailyCheckIn%20%3D%20async%20%28axiosInstance%2C%20cookie%29%20%3D%3E%20%7B%0A%20%20logger.loading%28%27Performing%20daily%20check-in...%27%29%3B%0A%20%20try%20%7B%0A%20%20%20%20const%20response%20%3D%20await%20axiosInstance.post%28%27%2Fcheckin%27%2C%20%7B%7D%2C%20%7B%0A%20%20%20%20%20%20httpsAgent%3A%20getProxyAgent%28%29%2C%0A%20%20%20%20%20%20headers%3A%20%7B%20%0A%20%20%20%20%20%20%20%20%27User-Agent%27%3A%20randomUA%28%29%2C%0A%20%20%20%20%20%20%20%20%27content-type%27%3A%20%27application%2Fjson%27%2C%0A%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%7D%29%3B%0A%20%20%20%20if%20%28response.data.success%29%20%7B%0A%20%20%20%20%20%20logger.success%28%60Daily%20check-in%20completed.%20Reward%3A%20%24%7Bresponse.data.reward%20%7C%7C%20%27N%2FA%27%7D%60%29%3B%0A%20%20%20%20%7D%20else%20%7B%0A%20%20%20%20%20%20logger.warn%28%27Daily%20check-in%20already%20completed%20or%20not%20available%27%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%20catch%20%28error%29%20%7B%0A%20%20%20%20logger.error%28%60Failed%20to%20perform%20daily%20check-in%3A%20%24%7Berror.response%3F.status%20%7C%7C%20error.message%7D%60%29%3B%0A%20%20%20%20if%20%28error.response%3F.status%20%3D%3D%3D%20401%29%20%7B%0A%20%20%20%20%20%20logger.error%28%27Cookie%20may%20have%20expired.%20Please%20update%20the%20cookie%20in%20.env%27%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%0A%7D%3B%0A%0A%2F%2F%20Fetch%20User%20Info%0Aconst%20fetchUserInfo%20%3D%20async%20%28axiosInstance%29%20%3D%3E%20%7B%0A%20%20logger.loading%28%27Fetching%20user%20info...%27%29%3B%0A%20%20try%20%7B%0A%20%20%20%20const%20response%20%3D%20await%20axiosInstance.get%28%27%2Fuser%2Fstats%27%2C%20%7B%0A%20%20%20%20%20%20httpsAgent%3A%20getProxyAgent%28%29%2C%0A%20%20%20%20%20%20headers%3A%20%7B%20%27User-Agent%27%3A%20randomUA%28%29%20%7D%2C%0A%20%20%20%20%7D%29%3B%0A%20%20%20%20logger.success%28%27User%20info%20fetched%20successfully%27%29%3B%0A%20%20%20%20logger.info%28%60Username%3A%20%24%7Bresponse.data.user.username%7D%2C%20Snoot%20Balance%3A%20%24%7Bresponse.data.user.snootBalance%7D%60%29%3B%0A%20%20%20%20return%20response.data%3B%0A%20%20%7D%20catch%20%28error%29%20%7B%0A%20%20%20%20logger.error%28%60Failed%20to%20fetch%20user%20info%3A%20%24%7Berror.response%3F.status%20%7C%7C%20error.message%7D%60%29%3B%0A%20%20%20%20return%20null%3B%0A%20%20%7D%0A%7D%3B%0A%0A%2F%2F%20Fetch%20Tasks%0Aconst%20fetchTasks%20%3D%20async%20%28axiosInstance%2C%20type%29%20%3D%3E%20%7B%0A%20%20logger.loading%28%60Fetching%20%24%7Btype%7D%20tasks...%60%29%3B%0A%20%20try%20%7B%0A%20%20%20%20const%20response%20%3D%20await%20axiosInstance.get%28%60%2Ftasks%3Ftype%3D%24%7Btype%7D%60%2C%20%7B%0A%20%20%20%20%20%20httpsAgent%3A%20getProxyAgent%28%29%2C%0A%20%20%20%20%20%20headers%3A%20%7B%20%27User-Agent%27%3A%20randomUA%28%29%20%7D%2C%0A%20%20%20%20%7D%29%3B%0A%20%20%20%20logger.success%28%60%24%7Btype%7D%20tasks%20fetched%20successfully%60%29%3B%0A%20%20%20%20return%20response.data.tasks%3B%0A%20%20%7D%20catch%20%28error%29%20%7B%0A%20%20%20%20logger.error%28%60Failed%20to%20fetch%20%24%7Btype%7D%20tasks%3A%20%24%7Berror.response%3F.status%20%7C%7C%20error.message%7D%60%29%3B%0A%20%20%20%20return%20%5B%5D%3B%0A%20%20%7D%0A%7D%3B%0A%0A%2F%2F%20Complete%20Task%0Aconst%20generateProofUrl%20%3D%20%28%29%20%3D%3E%20%7B%0A%20%20const%20usernames%20%3D%20%5B%27altcoinbear1%27%2C%20%27cryptofan%27%2C%20%27snootlover%27%2C%20%27airdropking%27%2C%20%27blockchainbro%27%5D%3B%0A%20%20const%20randomStatusId%20%3D%20Math.floor%281000000000000000000%20%2B%20Math.random%28%29%20%2A%20900000000000000000%29%3B%0A%20%20const%20randomUsername%20%3D%20usernames%5BMath.floor%28Math.random%28%29%20%2A%20usernames.length%29%5D%3B%0A%20%20return%20%60https%3A%2F%2Fx.com%2F%24%7BrandomUsername%7D%2Fstatus%2F%24%7BrandomStatusId%7D%60%3B%0A%7D%3B%0A%0Aconst%20completeTask%20%3D%20async%20%28axiosInstance%2C%20task%29%20%3D%3E%20%7B%0A%20%20logger.loading%28%60Completing%20task%20%24%7Btask.title%7D%20%28%24%7Btask.id%7D%29...%60%29%3B%0A%20%20try%20%7B%0A%20%20%20%20const%20payload%20%3D%20%7B%0A%20%20%20%20%20%20taskId%3A%20task.id%2C%0A%20%20%20%20%20%20action%3A%20%27complete%27%2C%0A%20%20%20%20%7D%3B%0A%0A%20%20%20%20if%20%28%5B%27Spread%20the%20Snoot%21%27%2C%20%27Like%2C%20Retweet%20and%20Comment%27%5D.includes%28task.title%29%29%20%7B%0A%20%20%20%20%20%20payload.proofUrl%20%3D%20generateProofUrl%28%29%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20const%20response%20%3D%20await%20axiosInstance.post%28%27%2Ftasks%2Fcomplete%27%2C%20payload%2C%20%7B%0A%20%20%20%20%20%20httpsAgent%3A%20getProxyAgent%28%29%2C%0A%20%20%20%20%20%20headers%3A%20%7B%20%0A%20%20%20%20%20%20%20%20%27User-Agent%27%3A%20randomUA%28%29%2C%0A%20%20%20%20%20%20%20%20%27content-type%27%3A%20%27application%2Fjson%27%2C%0A%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%7D%29%3B%0A%20%20%20%20if%20%28response.data.success%29%20%7B%0A%20%20%20%20%20%20logger.success%28%60Task%20%24%7Btask.title%7D%20completed%2C%20Reward%3A%20%24%7Bresponse.data.reward%7D%60%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%20catch%20%28error%29%20%7B%0A%20%20%20%20logger.error%28%60Failed%20to%20complete%20task%20%24%7Btask.title%7D%20%28%24%7Btask.id%7D%29%3A%20%24%7Berror.response%3F.status%20%7C%7C%20error.message%7D%60%29%3B%0A%20%20%7D%0A%7D%3B%0A%0A%2F%2F%20Process%20Account%0Aconst%20processAccount%20%3D%20async%20%28cookie%2C%20mode%29%20%3D%3E%20%7B%0A%20%20logger.step%28%60Processing%20account%20with%20cookie%3A%20%24%7Bcookie.slice%280%2C%2050%29%7D...%60%29%3B%0A%20%20const%20axiosInstance%20%3D%20createAxiosInstance%28cookie%29%3B%0A%0A%20%20%2F%2F%20Fetch%20user%20info%0A%20%20const%20userInfo%20%3D%20await%20fetchUserInfo%28axiosInstance%29%3B%0A%20%20if%20%28%21userInfo%29%20return%3B%0A%0A%20%20if%20%28mode%20%3D%3D%3D%20%27daily%27%29%20%7B%0A%20%20%20%20%2F%2F%20Perform%20only%20daily%20check-in%0A%20%20%20%20await%20performDailyCheckIn%28axiosInstance%2C%20cookie%29%3B%0A%20%20%7D%20else%20if%20%28mode%20%3D%3D%3D%20%27tasks%27%29%20%7B%0A%20%20%20%20%2F%2F%20Perform%20only%20tasks%0A%20%20%20%20const%20engagementTasks%20%3D%20await%20fetchTasks%28axiosInstance%2C%20%27engagement%27%29%3B%0A%20%20%20%20const%20referralTasks%20%3D%20await%20fetchTasks%28axiosInstance%2C%20%27referral%27%29%3B%0A%20%20%20%20const%20allTasks%20%3D%20%5B...engagementTasks%2C%20...referralTasks%5D%3B%0A%20%20%20%20const%20pendingTasks%20%3D%20allTasks.filter%28task%20%3D%3E%20task.status%20%3D%3D%3D%20%27pending%27%29%3B%0A%0A%20%20%20%20for%20%28const%20task%20of%20pendingTasks%29%20%7B%0A%20%20%20%20%20%20await%20completeTask%28axiosInstance%2C%20task%29%3B%0A%20%20%20%20%7D%0A%20%20%7D%0A%0A%20%20logger.success%28%27Account%20processing%20completed%27%29%3B%0A%7D%3B%0A%0A%2F%2F%20Prompt%20User%20for%20Mode%0Aconst%20promptUser%20%3D%20async%20%28%29%20%3D%3E%20%7B%0A%20%20const%20answers%20%3D%20await%20inquirer.prompt%28%5B%0A%20%20%20%20%7B%0A%20%20%20%20%20%20type%3A%20%27list%27%2C%0A%20%20%20%20%20%20name%3A%20%27mode%27%2C%0A%20%20%20%20%20%20message%3A%20%27What%20would%20you%20like%20to%20do%3F%27%2C%0A%20%20%20%20%20%20choices%3A%20%5B%0A%20%20%20%20%20%20%20%20%7B%20name%3A%20%27Perform%20Daily%20Check-in%27%2C%20value%3A%20%27daily%27%20%7D%2C%0A%20%20%20%20%20%20%20%20%7B%20name%3A%20%27Complete%20Tasks%27%2C%20value%3A%20%27tasks%27%20%7D%2C%0A%20%20%20%20%20%20%5D%2C%0A%20%20%20%20%7D%2C%0A%20%20%20%20%7B%0A%20%20%20%20%20%20type%3A%20%27confirm%27%2C%0A%20%20%20%20%20%20name%3A%20%27runDailyWithTimer%27%2C%0A%20%20%20%20%20%20message%3A%20%27Would%20you%20like%20to%20schedule%20Daily%20Check-in%20to%20run%20every%2024%20hours%3F%27%2C%0A%20%20%20%20%20%20when%3A%20%28answers%29%20%3D%3E%20answers.mode%20%3D%3D%3D%20%27daily%27%2C%0A%20%20%20%20%20%20default%3A%20false%2C%0A%20%20%20%20%7D%2C%0A%20%20%5D%29%3B%0A%20%20return%20answers%3B%0A%7D%3B%0A%0A%2F%2F%20Main%20Function%0Aconst%20main%20%3D%20async%20%28%29%20%3D%3E%20%7B%0A%20%20logger.banner%28%29%3B%0A%0A%20%20const%20cookies%20%3D%20loadCookies%28%29%3B%0A%20%20if%20%28cookies.length%20%3D%3D%3D%200%29%20%7B%0A%20%20%20%20logger.error%28%27No%20cookies%20found%20in%20.env%27%29%3B%0A%20%20%20%20return%3B%0A%20%20%7D%0A%0A%20%20%2F%2F%20Prompt%20user%20for%20mode%0A%20%20const%20%7B%20mode%2C%20runDailyWithTimer%20%7D%20%3D%20await%20promptUser%28%29%3B%0A%0A%20%20%2F%2F%20Run%20immediately%0A%20%20for%20%28const%20cookie%20of%20cookies%29%20%7B%0A%20%20%20%20await%20processAccount%28cookie%2C%20mode%29%3B%0A%20%20%7D%0A%0A%20%20%2F%2F%20Set%20up%20timer%20for%20daily%20check-in%20if%20selected%0A%20%20if%20%28mode%20%3D%3D%3D%20%27daily%27%20%26%26%20runDailyWithTimer%29%20%7B%0A%20%20%20%20const%20DAILY_INTERVAL%20%3D%2024%20%2A%2060%20%2A%2060%20%2A%201000%3B%20%2F%2F%2024%20hours%20in%20milliseconds%0A%20%20%20%20setInterval%28async%20%28%29%20%3D%3E%20%7B%0A%20%20%20%20%20%20logger.banner%28%29%3B%0A%20%20%20%20%20%20logger.info%28%27Running%20scheduled%20daily%20check-in...%27%29%3B%0A%20%20%20%20%20%20for%20%28const%20cookie%20of%20cookies%29%20%7B%0A%20%20%20%20%20%20%20%20await%20processAccount%28cookie%2C%20%27daily%27%29%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%2C%20DAILY_INTERVAL%29%3B%0A%20%20%20%20logger.info%28%27Daily%20check-in%20scheduled%20to%20run%20every%2024%20hours.%27%29%3B%0A%20%20%7D%0A%0A%20%20logger.success%28%27All%20accounts%20processed%27%29%3B%0A%7D%3B%0A%0Amain%28%29.catch%28%28error%29%20%3D%3E%20%7B%0A%20%20logger.error%28%60Main%20process%20failed%3A%20%24%7Berror.message%7D%60%29%3B%0A%7D%29%3B
+require('dotenv').config();
+const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const fs = require('fs');
+const inquirer = require('inquirer');
+
+// Colors and Logger
+const colors = {
+  reset: "\x1b[0m",
+  cyan: "\x1b[36m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  red: "\x1b[31m",
+  white: "\x1b[37m",
+  bold: "\x1b[1m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+};
+
+const logger = {
+  info: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
+  warn: (msg) => console.log(`${colors.yellow}[⚠] ${msg}${colors.reset}`),
+  error: (msg) => console.log(`${colors.red}[✗] ${msg}${colors.reset}`),
+  success: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`),
+  loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
+  step: (msg) => console.log(`${colors.white}[➤] ${msg}${colors.reset}`),
+  banner: () => {
+    console.log(`${colors.cyan}${colors.bold}`);
+    console.log('-----------------------------------------------');
+    console.log('  Snoonaut Auto Bot - ADB NODE  ');
+    console.log('-----------------------------------------------');
+    console.log(`${colors.reset}\n`);
+  },
+};
+
+// Random User-Agent
+const randomUA = () => {
+  const uas = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',
+  ];
+  return uas[Math.floor(Math.random() * uas.length)];
+};
+
+// Proxy Agent
+const getProxyAgent = () => {
+  if (fs.existsSync('proxies.txt')) {
+    const proxies = fs.readFileSync('proxies.txt', 'utf-8').split('\n').filter(Boolean);
+    if (proxies.length > 0) {
+      const proxy = proxies[Math.floor(Math.random() * proxies.length)];
+      const proxyUrl = proxy.includes('http') || proxy.includes('socks') ? proxy : `http://${proxy}`;
+      return new HttpsProxyAgent(proxyUrl);
+    }
+  }
+  return null;
+};
+
+// Load Cookies
+const loadCookies = () => {
+  const cookies = [];
+  Object.keys(process.env).forEach((key) => {
+    if (key.startsWith('COOKIE_')) {
+      cookies.push(process.env[key]);
+    }
+  });
+  return cookies;
+};
+
+// Create Axios Instance
+const createAxiosInstance = (cookie) => axios.create({
+  baseURL: 'https://earn.snoonaut.xyz/api',
+  headers: {
+    'accept': '*/*',
+    'accept-language': 'en-US,en;q=0.8',
+    'cache-control': 'max-age=120',
+    'priority': 'u=1, i',
+    'sec-ch-ua': '"Not)A;Brand";v="8", "Chromium";v="138", "Brave";v="138"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'cookie': cookie,
+    'Referer': 'https://earn.snoonaut.xyz/home',
+  },
+});
+
+// Daily Check-in Function
+const performDailyCheckIn = async (axiosInstance, cookie) => {
+  logger.loading('Performing daily check-in...');
+  try {
+    const response = await axiosInstance.post('/checkin', {}, {
+      httpsAgent: getProxyAgent(),
+      headers: { 
+        'User-Agent': randomUA(),
+        'content-type': 'application/json',
+      },
+    });
+    if (response.data.success) {
+      logger.success(`Daily check-in completed. Reward: ${response.data.reward || 'N/A'}`);
+    } else {
+      logger.warn('Daily check-in already completed or not available');
+    }
+  } catch (error) {
+    logger.error(`Failed to perform daily check-in: ${error.response?.status || error.message}`);
+    if (error.response?.status === 401) {
+      logger.error('Cookie may have expired. Please update the cookie in .env');
+    }
+  }
+};
+
+// Fetch User Info
+const fetchUserInfo = async (axiosInstance) => {
+  logger.loading('Fetching user info...');
+  try {
+    const response = await axiosInstance.get('/user/stats', {
+      httpsAgent: getProxyAgent(),
+      headers: { 'User-Agent': randomUA() },
+    });
+    logger.success('User info fetched successfully');
+    logger.info(`Username: ${response.data.user.username}, Snoot Balance: ${response.data.user.snootBalance}`);
+    return response.data;
+  } catch (error) {
+    logger.error(`Failed to fetch user info: ${error.response?.status || error.message}`);
+    return null;
+  }
+};
+
+// Fetch Tasks
+const fetchTasks = async (axiosInstance, type) => {
+  logger.loading(`Fetching ${type} tasks...`);
+  try {
+    const response = await axiosInstance.get(`/tasks?type=${type}`, {
+      httpsAgent: getProxyAgent(),
+      headers: { 'User-Agent': randomUA() },
+    });
+    logger.success(`${type} tasks fetched successfully`);
+    return response.data.tasks;
+  } catch (error) {
+    logger.error(`Failed to fetch ${type} tasks: ${error.response?.status || error.message}`);
+    return [];
+  }
+};
+
+// Complete Task
+const generateProofUrl = () => {
+  const usernames = ['altcoinbear1', 'cryptofan', 'snootlover', 'airdropking', 'blockchainbro'];
+  const randomStatusId = Math.floor(1000000000000000000 + Math.random() * 900000000000000000);
+  const randomUsername = usernames[Math.floor(Math.random() * usernames.length)];
+  return `https://x.com/${randomUsername}/status/${randomStatusId}`;
+};
+
+const completeTask = async (axiosInstance, task) => {
+  logger.loading(`Completing task ${task.title} (${task.id})...`);
+  try {
+    const payload = {
+      taskId: task.id,
+      action: 'complete',
+    };
+
+    if (['Spread the Snoot!', 'Like, Retweet and Comment'].includes(task.title)) {
+      payload.proofUrl = generateProofUrl();
+    }
+
+    const response = await axiosInstance.post('/tasks/complete', payload, {
+      httpsAgent: getProxyAgent(),
+      headers: { 
+        'User-Agent': randomUA(),
+        'content-type': 'application/json',
+      },
+    });
+    if (response.data.success) {
+      logger.success(`Task ${task.title} completed, Reward: ${response.data.reward}`);
+    }
+  } catch (error) {
+    logger.error(`Failed to complete task ${task.title} (${task.id}): ${error.response?.status || error.message}`);
+  }
+};
+
+// Process Account
+const processAccount = async (cookie, mode) => {
+  logger.step(`Processing account with cookie: ${cookie.slice(0, 50)}...`);
+  const axiosInstance = createAxiosInstance(cookie);
+
+  // Fetch user info
+  const userInfo = await fetchUserInfo(axiosInstance);
+  if (!userInfo) return;
+
+  if (mode === 'daily') {
+    // Perform only daily check-in
+    await performDailyCheckIn(axiosInstance, cookie);
+  } else if (mode === 'tasks') {
+    // Perform only tasks
+    const engagementTasks = await fetchTasks(axiosInstance, 'engagement');
+    const referralTasks = await fetchTasks(axiosInstance, 'referral');
+    const allTasks = [...engagementTasks, ...referralTasks];
+    const pendingTasks = allTasks.filter(task => task.status === 'pending');
+
+    for (const task of pendingTasks) {
+      await completeTask(axiosInstance, task);
+    }
+  }
+
+  logger.success('Account processing completed');
+};
+
+// Prompt User for Mode
+const promptUser = async () => {
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'mode',
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Perform Daily Check-in', value: 'daily' },
+        { name: 'Complete Tasks', value: 'tasks' },
+      ],
+    },
+    {
+      type: 'confirm',
+      name: 'runDailyWithTimer',
+      message: 'Would you like to schedule Daily Check-in to run every 24 hours?',
+      when: (answers) => answers.mode === 'daily',
+      default: false,
+    },
+  ]);
+  return answers;
+};
+
+// Main Function
+const main = async () => {
+  logger.banner();
+
+  const cookies = loadCookies();
+  if (cookies.length === 0) {
+    logger.error('No cookies found in .env');
+    return;
+  }
+
+  // Prompt user for mode
+  const { mode, runDailyWithTimer } = await promptUser();
+
+  // Run immediately
+  for (const cookie of cookies) {
+    await processAccount(cookie, mode);
+  }
+
+  // Set up timer for daily check-in if selected
+  if (mode === 'daily' && runDailyWithTimer) {
+    const DAILY_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    setInterval(async () => {
+      logger.banner();
+      logger.info('Running scheduled daily check-in...');
+      for (const cookie of cookies) {
+        await processAccount(cookie, 'daily');
+      }
+    }, DAILY_INTERVAL);
+    logger.info('Daily check-in scheduled to run every 24 hours.');
+  }
+
+  logger.success('All accounts processed');
+};
+
+main().catch((error) => {
+  logger.error(`Main process failed: ${error.message}`);
+});
