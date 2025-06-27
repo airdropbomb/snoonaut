@@ -2,8 +2,9 @@ require('dotenv').config();
 const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const fs = require('fs');
+const inquirer = require('inquirer');
 
-// Colors and Logger (မူရင်းကုဒ်ကတည်းက ထည့်ထားတာကို ထည့်ထားပါတယ်)
+// Colors and Logger
 const colors = {
   reset: "\x1b[0m",
   cyan: "\x1b[36m",
@@ -104,39 +105,13 @@ const performDailyCheckIn = async (axiosInstance, cookie) => {
     }
   } catch (error) {
     logger.error(`Failed to perform daily check-in: ${error.response?.status || error.message}`);
-  }
-};
-
-// Process Account (Modified to include daily check-in option)
-const processAccount = async (cookie, dailyOnly = false) => {
-  logger.step(`Processing account with cookie: ${cookie.slice(0, 50)}...`);
-  const axiosInstance = createAxiosInstance(cookie);
-
-  // Fetch user info
-  const userInfo = await fetchUserInfo(axiosInstance);
-  if (!userInfo) return;
-
-  if (dailyOnly) {
-    // Only perform daily check-in
-    await performDailyCheckIn(axiosInstance, cookie);
-  } else {
-    // Existing task processing logic
-    const engagementTasks = await fetchTasks(axiosInstance, 'engagement');
-    const referralTasks = await fetchTasks(axiosInstance, 'referral');
-    const allTasks = [...engagementTasks, ...referralTasks];
-    const pendingTasks = allTasks.filter(task => task.status === 'pending');
-
-    for (const task of pendingTasks) {
-      await completeTask(axiosInstance, task);
+    if (error.response?.status === 401) {
+      logger.error('Cookie may have expired. Please update the cookie in .env');
     }
-    // Perform daily check-in as part of full run
-    await performDailyCheckIn(axiosInstance, cookie);
   }
-
-  logger.success('Account processing completed');
 };
 
-// Fetch User Info (Unchanged)
+// Fetch User Info
 const fetchUserInfo = async (axiosInstance) => {
   logger.loading('Fetching user info...');
   try {
@@ -153,7 +128,7 @@ const fetchUserInfo = async (axiosInstance) => {
   }
 };
 
-// Fetch Tasks (Unchanged)
+// Fetch Tasks
 const fetchTasks = async (axiosInstance, type) => {
   logger.loading(`Fetching ${type} tasks...`);
   try {
@@ -169,7 +144,14 @@ const fetchTasks = async (axiosInstance, type) => {
   }
 };
 
-// Complete Task (Unchanged)
+// Complete Task
+const generateProofUrl = () => {
+  const usernames = ['altcoinbear1', 'cryptofan', 'snootlover', 'airdropking', 'blockchainbro'];
+  const randomStatusId = Math.floor(1000000000000000000 + Math.random() * 900000000000000000);
+  const randomUsername = usernames[Math.floor(Math.random() * usernames.length)];
+  return `https://x.com/${randomUsername}/status/${randomStatusId}`;
+};
+
 const completeTask = async (axiosInstance, task) => {
   logger.loading(`Completing task ${task.title} (${task.id})...`);
   try {
@@ -197,15 +179,57 @@ const completeTask = async (axiosInstance, task) => {
   }
 };
 
-// Generate Proof URL (Unchanged)
-const generateProofUrl = () => {
-  const usernames = ['altcoinbear1', 'cryptofan', 'snootlover', 'airdropking', 'blockchainbro'];
-  const randomStatusId = Math.floor(1000000000000000000 + Math.random() * 900000000000000000);
-  const randomUsername = usernames[Math.floor(Math.random() * usernames.length)];
-  return `https://x.com/${randomUsername}/status/${randomStatusId}`;
+// Process Account
+const processAccount = async (cookie, mode) => {
+  logger.step(`Processing account with cookie: ${cookie.slice(0, 50)}...`);
+  const axiosInstance = createAxiosInstance(cookie);
+
+  // Fetch user info
+  const userInfo = await fetchUserInfo(axiosInstance);
+  if (!userInfo) return;
+
+  if (mode === 'daily') {
+    // Perform only daily check-in
+    await performDailyCheckIn(axiosInstance, cookie);
+  } else if (mode === 'tasks') {
+    // Perform only tasks
+    const engagementTasks = await fetchTasks(axiosInstance, 'engagement');
+    const referralTasks = await fetchTasks(axiosInstance, 'referral');
+    const allTasks = [...engagementTasks, ...referralTasks];
+    const pendingTasks = allTasks.filter(task => task.status === 'pending');
+
+    for (const task of pendingTasks) {
+      await completeTask(axiosInstance, task);
+    }
+  }
+
+  logger.success('Account processing completed');
 };
 
-// Main Function with Timer and Command-line Option
+// Prompt User for Mode
+const promptUser = async () => {
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'mode',
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Perform Daily Check-in', value: 'daily' },
+        { name: 'Complete Tasks', value: 'tasks' },
+      ],
+    },
+    {
+      type: 'confirm',
+      name: 'runDailyWithTimer',
+      message: 'Would you like to schedule Daily Check-in to run every 24 hours?',
+      when: (answers) => answers.mode === 'daily',
+      default: false,
+    },
+  ]);
+  return answers;
+};
+
+// Main Function
 const main = async () => {
   logger.banner();
 
@@ -215,26 +239,28 @@ const main = async () => {
     return;
   }
 
-  // Check for command-line argument
-  const isDailyOnly = process.argv.includes('--daily');
+  // Prompt user for mode
+  const { mode, runDailyWithTimer } = await promptUser();
 
   // Run immediately
   for (const cookie of cookies) {
-    await processAccount(cookie, isDailyOnly);
+    await processAccount(cookie, mode);
   }
 
-  // Set up timer for daily check-in (every 24 hours)
-  if (isDailyOnly) {
+  // Set up timer for daily check-in if selected
+  if (mode === 'daily' && runDailyWithTimer) {
     const DAILY_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
     setInterval(async () => {
       logger.banner();
       logger.info('Running scheduled daily check-in...');
       for (const cookie of cookies) {
-        await processAccount(cookie, true);
+        await processAccount(cookie, 'daily');
       }
     }, DAILY_INTERVAL);
-    logger.info(`Daily check-in scheduled to run every 24 hours.`);
+    logger.info('Daily check-in scheduled to run every 24 hours.');
   }
+
+  logger.success('All accounts processed');
 };
 
 main().catch((error) => {
