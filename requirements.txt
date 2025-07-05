@@ -2,4 +2,4 @@ python-dotenv
 requests
 urllib3
 colorama
-inquirerpy
+inquirer
