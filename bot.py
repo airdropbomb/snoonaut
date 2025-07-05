@@ -269,7 +269,7 @@ def main():
     
     answers = prompt_user()
     mode = answers["mode"]
-    run_daily_with_timer = answers.get("run_daily_with_timer", False)
+run_daily_with_timer = answers.get("run_daily_with_timer", False)
     
     # Run immediately
     for cookie in cookies:
