@@ -264,16 +264,17 @@ def main():
     
     cookies = load_cookies()
     if not cookies:
-        Logger.error("No cookies found in .env")
-        return
-    
-    answers = prompt_user()
-    mode = answers["mode"]
+    Logger.error("No cookies found in .env")
+    return
+
+answers = prompt_user()
+mode = answers["mode"]
 run_daily_with_timer = answers.get("run_daily_with_timer", False)
-    
-    # Run immediately
-    for cookie in cookies:
-        process_account(cookie, mode)
+
+# ✅ Indentation must be correct here
+for cookie in cookies:
+    process_account(cookie, mode)
+
     
     # Set up timer for daily check-in if selected
     if mode == "daily" and run_daily_with_timer:
