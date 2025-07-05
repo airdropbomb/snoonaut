@@ -6,7 +6,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from colorama import init, Fore, Style
-import inquirer
+from inquirerpy import inquirer
 from pathlib import Path
 
 # Initialize colorama for colored output
@@ -265,16 +265,19 @@ def main():
     cookies = load_cookies()
     if not cookies:
         Logger.error("No cookies found in .env")
-        return  # ✅ Indented line required here
-
-answers = prompt_user()
-mode = answers["mode"]
-run_daily_with_timer = answers.get("run_daily_with_timer", False)
-
-# ✅ Indentation must be correct here
-for cookie in cookies:
-    process_account(cookie, mode)
-
+        return
+    
+    answers = prompt_user()
+    if not answers:  # Handle case where prompt is cancelled
+        Logger.error("User cancelled the prompt. Exiting...")
+        return
+    
+    mode = answers["mode"]
+    run_daily_with_timer = answers.get("run_daily_with_timer", False)
+    
+    # Run immediately
+    for cookie in cookies:
+        process_account(cookie, mode)
     
     # Set up timer for daily check-in if selected
     if mode == "daily" and run_daily_with_timer:
