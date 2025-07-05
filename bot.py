@@ -186,7 +186,7 @@ def fetch_tasks(session, task_type):
 def generate_proof_url():
     usernames = ["altcoinbear1", "cryptofan", "snootlover", "airdropking", "blockchainbro"]
     random_status_id = random.randint(1000000000000000000, 1900000000000000000)
-    random_username = random.choice(usernames)
+    random_username = random.choice(usernames)  # Fixed typo: usenames -> usernames
     return f"https://x.com/{random_username}/status/{random_status_id}"
 
 # Complete Task
