@@ -264,8 +264,8 @@ def main():
     
     cookies = load_cookies()
     if not cookies:
-    Logger.error("No cookies found in .env")
-    return
+        Logger.error("No cookies found in .env")
+        return  # ✅ Indented line required here
 
 answers = prompt_user()
 mode = answers["mode"]
