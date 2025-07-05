@@ -60,10 +60,17 @@ const getProxyAgent = () => {
 const loadCookies = () => {
   const cookies = [];
   Object.keys(process.env).forEach((key) => {
-    if (key.startsWith('COOKIE_')) {
-      cookies.push(process.env[key]);
+    if (key.startsWith('COOKIE_') && !key.includes('_vcrcs') && !key.includes('_csrf') && !key.includes('_session')) {
+      const cookieParts = [];
+      Object.keys(process.env).forEach((subKey) => {
+        if (subKey.startsWith(`${key}_`) || subKey === key) {
+          cookieParts.push(process.env[subKey]);
+        }
+      });
+      cookies.push(cookieParts.join('; '));
     }
   });
+  console.log('Loaded cookies:', cookies); // Debugging
   return cookies;
 };
 
