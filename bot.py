@@ -286,9 +286,7 @@ def main():
                 process_account(cookie, "daily")
             time.sleep(DAILY_INTERVAL)
     
- /
-
-   Logger.success("All accounts processed")
+    Logger.success("All accounts processed")
 
 if __name__ == "__main__":
     try:
