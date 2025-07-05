@@ -243,21 +243,24 @@ def prompt_user():
             "type": "list",
             "name": "mode",
             "message": "What would you like to do?",
-            "choices": [
-                {"name": "Perform Daily Check-in", "value": "daily"},
-                {"name": "Complete Tasks", "value": "tasks"},
-            ]
+            "choices": ["Perform Daily Check-in", "Complete Tasks"],
         },
         {
             "type": "confirm",
             "name": "run_daily_with_timer",
             "message": "Would you like to schedule Daily Check-in to run every 24 hours?",
-            "when": lambda answers: answers["mode"] == "daily",
+            "when": lambda answers: answers["mode"] == "Perform Daily Check-in",
             "default": False
         }
     ]
-    return inquirer.prompt(questions)
-
+    answers = prompt(questions)
+    # Map choices to values for compatibility
+    if answers and answers["mode"] == "Perform Daily Check-in":
+        answers["mode"] = "daily"
+    elif answers and answers["mode"] == "Complete Tasks":
+        answers["mode"] = "tasks"
+    return answers
+    
 # Main Function
 def main():
     Logger.banner()
