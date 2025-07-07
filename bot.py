@@ -1,302 +1,184 @@
-import os
-import random
-import time
-from dotenv import load_dotenv
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from colorama import init, Fore, Style
-from inquirerpy import inquirer
-from pathlib import Path
+require('dotenv').config();
+const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const fs = require('fs');
 
-# Initialize colorama for colored output
-init()
+const colors = {
+  reset: "\x1b[0m",
+  cyan: "\x1b[36m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  red: "\x1b[31m",
+  white: "\x1b[37m",
+  bold: "\x1b[1m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+};
 
-# Colors and Logger
-class Colors:
-    RESET = Style.RESET_ALL
-    CYAN = Fore.CYAN
-    GREEN = Fore.GREEN
-    YELLOW = Fore.YELLOW
-    RED = Fore.RED
-    WHITE = Fore.WHITE
-    BOLD = Style.BRIGHT
-    BLUE = Fore.BLUE
-    MAGENTA = Fore.MAGENTA
+const logger = {
+  info: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
+  warn: (msg) => console.log(`${colors.yellow}[⚠] ${msg}${colors.reset}`),
+  error: (msg) => console.log(`${colors.red}[✗] ${msg}${colors.reset}`),
+  success: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`),
+  loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
+  step: (msg) => console.log(`${colors.white}[➤] ${msg}${colors.reset}`),
+  banner: () => {
+    console.log(`${colors.cyan}${colors.bold}`);
+    console.log('-----------------------------------------------');
+    console.log('  Snoonaut Auto Bot - Airdrop Insiders  ');
+    console.log('-----------------------------------------------');
+    console.log(`${colors.reset}\n`);
+  },
+};
 
-class Logger:
-    @staticmethod
-    def info(msg):
-        print(f"{Colors.GREEN}[✓] {msg}{Colors.RESET}")
+const randomUA = () => {
+  const uas = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',
+  ];
+  return uas[Math.floor(Math.random() * uas.length)];
+};
 
-    @staticmethod
-    def warn(msg):
-        print(f"{Colors.YELLOW}[⚠] {msg}{Colors.RESET}")
+const generateProofUrl = () => {
+  const usernames = ['altcoinbear1', 'cryptofan', 'snootlover', 'airdropking', 'blockchainbro'];
+  const randomStatusId = Math.floor(1000000000000000000 + Math.random() * 900000000000000000);
+  const randomUsername = usernames[Math.floor(Math.random() * usernames.length)];
+  return `https://x.com/${randomUsername}/status/${randomStatusId}`;
+};
 
-    @staticmethod
-    def error(msg):
-        print(f"{Colors.RED}[✗] {msg}{Colors.RESET}")
+const getProxyAgent = () => {
+  if (fs.existsSync('proxies.txt')) {
+    const proxies = fs.readFileSync('proxies.txt', 'utf-8').split('\n').filter(Boolean);
+    if (proxies.length > 0) {
+      const proxy = proxies[Math.floor(Math.random() * proxies.length)];
+      const proxyUrl = proxy.includes('http') || proxy.includes('socks') ? proxy : `http://${proxy}`;
+      return new HttpsProxyAgent(proxyUrl);
+    }
+  }
+  return null; 
+};
 
-    @staticmethod
-    def success(msg):
-        print(f"{Colors.GREEN}[✅] {msg}{Colors.RESET}")
+const loadCookies = () => {
+  const cookies = [];
+  Object.keys(process.env).forEach((key) => {
+    if (key.startsWith('COOKIE_')) {
+      cookies.push(process.env[key]);
+    }
+  });
+  return cookies;
+};
 
-    @staticmethod
-    def loading(msg):
-        print(f"{Colors.CYAN}[⟳] {msg}{Colors.RESET}")
+const createAxiosInstance = (cookie) => axios.create({
+  baseURL: 'https://earn.snoonaut.xyz/api',
+  headers: {
+    'accept': '*/*',
+    'accept-language': 'en-US,en;q=0.8',
+    'cache-control': 'max-age=120',
+    'priority': 'u=1, i',
+    'sec-ch-ua': '"Not)A;Brand";v="8", "Chromium";v="138", "Brave";v="138"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'cookie': cookie,
+    'Referer': 'https://earn.snoonaut.xyz/home',
+  },
+});
 
-    @staticmethod
-    def step(msg):
-        print(f"{Colors.WHITE}[➤] {msg}{Colors.RESET}")
+const fetchUserInfo = async (axiosInstance) => {
+  logger.loading('Fetching user info...');
+  try {
+    const response = await axiosInstance.get('/user/stats', {
+      httpsAgent: getProxyAgent(),
+      headers: { 'User-Agent': randomUA() },
+    });
+    logger.success('User info fetched successfully');
+    logger.info(`Username: ${response.data.user.username}, Snoot Balance: ${response.data.user.snootBalance}`);
+    return response.data;
+  } catch (error) {
+    logger.error('Failed to fetch user info');
+    return null;
+  }
+};
 
-    @staticmethod
-    def banner():
-        print(f"{Colors.CYAN}{Colors.BOLD}")
-        print("-----------------------------------------------")
-        print("  Snoonaut Auto Bot - ADB PYTHON  ")
-        print("-----------------------------------------------")
-        print(f"{Colors.RESET}\n")
+const fetchTasks = async (axiosInstance, type) => {
+  logger.loading(`Fetching ${type} tasks...`);
+  try {
+    const response = await axiosInstance.get(`/tasks?type=${type}`, {
+      httpsAgent: getProxyAgent(),
+      headers: { 'User-Agent': randomUA() },
+    });
+    logger.success(`${type} tasks fetched successfully`);
+    return response.data.tasks;
+  } catch (error) {
+    logger.error(`Failed to fetch ${type} tasks`);
+    return [];
+  }
+};
 
-# Random User-Agent
-def random_ua():
-    uas = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    ]
-    return random.choice(uas)
+const completeTask = async (axiosInstance, task) => {
+  logger.loading(`Completing task ${task.title} (${task.id})...`);
+  try {
+    const payload = {
+      taskId: task.id,
+      action: 'complete',
+    };
 
-# Proxy Agent
-def get_proxy():
-    if Path("proxies.txt").exists():
-        with open("proxies.txt", "r", encoding="utf-8") as f:
-            proxies = [line.strip() for line in f if line.strip()]
-        if proxies:
-            proxy = random.choice(proxies)
-            if not proxy.startswith(("http", "socks")):
-                proxy = f"http://{proxy}"
-            return {"http": proxy, "https": proxy}
-    return None
+    if (['Spread the Snoot!', 'Like, Retweet and Comment'].includes(task.title)) {
+      payload.proofUrl = generateProofUrl();
+    }
 
-# Load Cookies
-def load_cookies():
-    load_dotenv()
-    cookies = []
-    for key in os.environ:
-        if key.startswith("COOKIE_") and "_vcrcs" not in key and "_csrf" not in key and "_session" not in key:
-            cookie_parts = []
-            for sub_key in os.environ:
-                if sub_key.startswith(f"{key}_") or sub_key == key:
-                    cookie_parts.append(os.environ[sub_key])
-            cookies.append("; ".join(cookie_parts))
-    print("Loaded cookies:", cookies)  # Debugging
-    return cookies
+    const response = await axiosInstance.post('/tasks/complete', payload, {
+      httpsAgent: getProxyAgent(),
+      headers: { 
+        'User-Agent': randomUA(),
+        'content-type': 'application/json',
+      },
+    });
+    if (response.data.success) {
+      logger.success(`Task ${task.title} completed, Reward: ${response.data.reward}`);
+    }
+  } catch (error) {
+    logger.error(`Failed to complete task ${task.title} (${task.id})`);
+  }
+};
 
-# Create Requests Session
-def create_session(cookie):
-    session = requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    session.mount("https://", HTTPAdapter(max_retries=retries))
-    session.headers.update({
-        "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "priority": "u=1, i",
-        "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Windows"',
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "cookie": cookie,
-        "Referer": "https://earn.snoonaut.xyz/home",
-        "User-Agent": random_ua(),
-    })
-    return session
+const processAccount = async (cookie) => {
+  logger.step(`Processing account with cookie: ${cookie.slice(0, 50)}...`);
+  const axiosInstance = createAxiosInstance(cookie);
 
-# Daily Check-in Function
-def perform_daily_check_in(session, cookie):
-    Logger.loading("Performing daily check-in...")
-    time.sleep(1)  # Delay to avoid bot detection
-    try:
-        proxies = get_proxy()
-        response = session.post(
-            "https://earn.snoonaut.xyz/api/checkin",
-            json={},
-            headers={"User-Agent": random_ua(), "content-type": "application/json"},
-            proxies=proxies,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        if data.get("success"):
-            Logger.success(f"Daily check-in completed. Reward: {data.get('reward', 'N/A')}")
-        else:
-            Logger.warn("Daily check-in already completed or not available")
-    except requests.exceptions.RequestException as e:
-        Logger.error(f"Failed to perform daily check-in: {e}")
-        if hasattr(e.response, "status_code") and e.response.status_code == 401:
-            Logger.error("Cookie may have expired. Please update the cookie in .env")
-        elif hasattr(e.response, "status_code") and e.response.status_code == 403:
-            Logger.error("Request blocked by Vercel WAF. Check headers or cookies.")
+  const userInfo = await fetchUserInfo(axiosInstance);
+  if (!userInfo) return;
 
-# Fetch User Info
-def fetch_user_info(session):
-    Logger.loading("Fetching user info...")
-    time.sleep(1)
-    try:
-        proxies = get_proxy()
-        response = session.get(
-            "https://earn.snoonaut.xyz/api/user/stats",
-            headers={"User-Agent": random_ua()},
-            proxies=proxies,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        Logger.success("User info fetched successfully")
-        Logger.info(f"Username: {data['user']['username']}, Snoot Balance: {data['user']['snootBalance']}")
-        return data
-    except requests.exceptions.RequestException as e:
-        Logger.error(f"Failed to fetch user info: {e}")
-        return None
+  const engagementTasks = await fetchTasks(axiosInstance, 'engagement');
+  const referralTasks = await fetchTasks(axiosInstance, 'referral');
 
-# Fetch Tasks
-def fetch_tasks(session, task_type):
-    Logger.loading(f"Fetching {task_type} tasks...")
-    time.sleep(1)
-    try:
-        proxies = get_proxy()
-        response = session.get(
-            f"https://earn.snoonaut.xyz/api/tasks?type={task_type}",
-            headers={"User-Agent": random_ua()},
-            proxies=proxies,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        Logger.success(f"{task_type} tasks fetched successfully")
-        return data.get("tasks", [])
-    except requests.exceptions.RequestException as e:
-        Logger.error(f"Failed to fetch {task_type} tasks: {e}")
-        return []
+  const allTasks = [...engagementTasks, ...referralTasks];
+  const pendingTasks = allTasks.filter(task => task.status === 'pending');
 
-# Generate Proof URL
-def generate_proof_url():
-    usernames = ["altcoinbear1", "cryptofan", "snootlover", "airdropking", "blockchainbro"]
-    random_status_id = random.randint(1000000000000000000, 1900000000000000000)
-    random_username = random.choice(usernames)  # Fixed typo: usenames -> usernames
-    return f"https://x.com/{random_username}/status/{random_status_id}"
+  for (const task of pendingTasks) {
+    await completeTask(axiosInstance, task);
+  }
 
-# Complete Task
-def complete_task(session, task):
-    Logger.loading(f"Completing task {task['title']} ({task['id']})...")
-    time.sleep(1)
-    try:
-        payload = {"taskId": task["id"], "action": "complete"}
-        if task["title"] in ["Spread the Snoot!", "Like, Retweet and Comment"]:
-            payload["proofUrl"] = generate_proof_url()
-        
-        proxies = get_proxy()
-        response = session.post(
-            "https://earn.snoonaut.xyz/api/tasks/complete",
-            json=payload,
-            headers={"User-Agent": random_ua(), "content-type": "application/json"},
-            proxies=proxies,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        if data.get("success"):
-            Logger.success(f"Task {task['title']} completed, Reward: {data.get('reward')}")
-    except requests.exceptions.RequestException as e:
-        Logger.error(f"Failed to complete task {task['title']} ({task['id']}): {e}")
+  logger.success('All tasks processed for this account');
+};
 
-# Process Account
-def process_account(cookie, mode):
-    Logger.step(f"Processing account with cookie: {cookie[:50]}...")
-    session = create_session(cookie)
-    
-    # Fetch user info
-    user_info = fetch_user_info(session)
-    if not user_info:
-        return
-    
-    if mode == "daily":
-        perform_daily_check_in(session, cookie)
-    elif mode == "tasks":
-        engagement_tasks = fetch_tasks(session, "engagement")
-        referral_tasks = fetch_tasks(session, "referral")
-        all_tasks = engagement_tasks + referral_tasks
-        pending_tasks = [task for task in all_tasks if task.get("status") == "pending"]
-        
-        for task in pending_tasks:
-            complete_task(session, task)
-    
-    Logger.success("Account processing completed")
+const main = async () => {
+  logger.banner();
+  const cookies = loadCookies();
+  if (cookies.length === 0) {
+    logger.error('No cookies found in .env');
+    return;
+  }
 
-# Prompt User for Mode
-def prompt_user():
-    questions = [
-        {
-            "type": "list",
-            "name": "mode",
-            "message": "What would you like to do?",
-            "choices": ["Perform Daily Check-in", "Complete Tasks"],
-        },
-        {
-            "type": "confirm",
-            "name": "run_daily_with_timer",
-            "message": "Would you like to schedule Daily Check-in to run every 24 hours?",
-            "when": lambda answers: answers["mode"] == "Perform Daily Check-in",
-            "default": False
-        }
-    ]
-    answers = prompt(questions)
-    # Map choices to values for compatibility
-    if answers and answers["mode"] == "Perform Daily Check-in":
-        answers["mode"] = "daily"
-    elif answers and answers["mode"] == "Complete Tasks":
-        answers["mode"] = "tasks"
-    return answers
-    
-# Main Function
-def main():
-    Logger.banner()
-    
-    cookies = load_cookies()
-    if not cookies:
-        Logger.error("No cookies found in .env")
-        return
-    
-    answers = prompt_user()
-    if not answers:  # Handle case where prompt is cancelled
-        Logger.error("User cancelled the prompt. Exiting...")
-        return
-    
-    mode = answers["mode"]
-    run_daily_with_timer = answers.get("run_daily_with_timer", False)
-    
-    # Run immediately
-    for cookie in cookies:
-        process_account(cookie, mode)
-    
-    # Set up timer for daily check-in if selected
-    if mode == "daily" and run_daily_with_timer:
-        DAILY_INTERVAL = 24 * 60 * 60  # 24 hours in seconds
-        Logger.info("Daily check-in scheduled to run every 24 hours.")
-        while True:
-            Logger.banner()
-            Logger.info("Running scheduled daily check-in...")
-            for cookie in cookies:
-                process_account(cookie, "daily")
-            time.sleep(DAILY_INTERVAL)
-    
-    Logger.success("All accounts processed")
+  for (const cookie of cookies) {
+    await processAccount(cookie);
+  }
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        Logger.error(f"Main process failed: {e}")
+  logger.success('All accounts processed');
+};
+
+main().catch(console.error);
